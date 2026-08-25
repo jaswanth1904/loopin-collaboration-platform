@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkspaceRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum CardPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedWorkspaces   Workspace[]
+  workspaceMemberships WorkspaceMember[]
+  assignedCards     Card[]
+  activityLogs      ActivityLog[]
+
+  @@index([email])
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members WorkspaceMember[]
+  boards  Board[]
+
+  @@index([slug])
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model Board {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  columns      Column[]
+  activityLogs ActivityLog[]
+
+  @@index([workspaceId])
+}
+
+model Column {
+  id         String   @id @default(cuid())
+  title      String
+  orderIndex Float
+  boardId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@index([boardId])
+}
+
+model Card {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  orderIndex   Float
+  priority     CardPriority @default(MEDIUM)
+  columnId     String
+  assignedToId String?
+  dueDate      DateTime?
+  labels       String[]     @default([])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  column     Column  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignedTo User?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([columnId])
+  @@index([assignedToId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  metadata  Json     @default("{}")
+  boardId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+  @@index([userId])
+  @@index([createdAt])
+}

@@ -1,0 +1,1 @@
+﻿require('dotenv').config(); const { Pool } = require('pg'); const pool = new Pool({ connectionString: process.env.DATABASE_URL }); pool.query('SELECT role FROM "WorkspaceMember" JOIN "User" ON "User".id = "WorkspaceMember"."userId" WHERE "User".email = \', ['aj19.jaswanth@gmail.com']).then(r => console.log(r.rows)).catch(console.error).finally(()=>pool.end());
