@@ -15,6 +15,24 @@ const socketColumnMovedSchema = z.object({
     boardId: z.string(),
 });
 
+const socketMeetingStartedSchema = z.object({
+    boardId: z.string(),
+    userName: z.string(),
+    roomName: z.string(),
+});
+
+const socketChatMessageSchema = z.object({
+    boardId: z.string(),
+    message: z.object({
+        id: z.string(),
+        user: z.string(),
+        avatar: z.string(),
+        content: z.string(),
+        timestamp: z.string(),
+        isMe: z.boolean().optional(),
+    }),
+});
+
 export function registerBoardEvents(io: Server, socket: Socket): void {
     // Join a board room
     socket.on('join:board', (payload: { boardId: string; userId: string }) => {
@@ -63,5 +81,21 @@ export function registerBoardEvents(io: Server, socket: Socket): void {
     socket.on('board:updated', (payload: { boardId: string }) => {
         if (!payload.boardId) return;
         socket.to(`board:${payload.boardId}`).emit('board:updated', { boardId: payload.boardId });
+    });
+
+    // Meeting started event
+    socket.on('meeting:started', (payload: unknown) => {
+        const parsed = socketMeetingStartedSchema.safeParse(payload);
+        if (!parsed.success) return;
+
+        socket.to(`board:${parsed.data.boardId}`).emit('meeting:started', parsed.data);
+    });
+
+    // Real-time Chat event
+    socket.on('chat:message', (payload: unknown) => {
+        const parsed = socketChatMessageSchema.safeParse(payload);
+        if (!parsed.success) return;
+
+        socket.to(`board:${parsed.data.boardId}`).emit('chat:message', parsed.data.message);
     });
 }

@@ -33,6 +33,11 @@ model User {
   assignedCards     Card[]
   activityLogs      ActivityLog[]
 
+  // Real-time & Collaboration Additions
+  status            String         @default("ONLINE") // ONLINE, OFFLINE, IN_MEETING
+  messages          Message[]
+  notifications     Notification[]
+
   @@index([email])
 }
 
@@ -47,6 +52,7 @@ model Workspace {
   owner   User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members WorkspaceMember[]
   boards  Board[]
+  channels Channel[]
 
   @@index([slug])
   @@index([ownerId])
@@ -128,6 +134,47 @@ model ActivityLog {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([boardId])
-  @@index([userId])
   @@index([createdAt])
+}
+
+// ------------------------------------
+// Real-time Chat & Notifications System
+// ------------------------------------
+
+model Channel {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "General", "Engineering team"
+  workspaceId String
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
+  @@index([workspaceId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  channelId String
+  authorId  String
+  createdAt DateTime @default(now())
+
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([authorId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   @default("GENERAL") // MEETING_STARTED, MENTION, TASK_ASSIGNED
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

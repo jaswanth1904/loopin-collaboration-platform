@@ -21,12 +21,13 @@ import { CardItem } from './Card';
 import { DragOverlayWrapper } from './DragOverlayWrapper';
 import { NewColumnButton } from './NewColumnButton';
 import { ActivityFeed } from '@/components/shared/ActivityFeed';
-
+import ChatSidebar from '@/components/kanban/ChatSidebar';
+import VideoCall from '@/components/kanban/VideoCall';
 import { moveCard, reorderColumns } from '@/app/actions/board.actions';
 import { getOrderIndex } from '@/lib/utils';
 import type { AuthUser } from '@/types';
 import type { KanbanColumn, KanbanCard } from '@/types/kanban.types';
-import { LayoutGrid, Activity, PanelRight } from 'lucide-react';
+import { LayoutGrid, Activity, PanelRight, MessageSquare, Video } from 'lucide-react';
 
 interface BoardProps {
     board: {
@@ -43,7 +44,32 @@ interface BoardProps {
 export function Board({ board, currentUser }: BoardProps) {
     const { columns, setColumns, setDragActive, clearDrag, activeType, activeCard, activeColumn, activePresentUsers, moveCard: storeMoveCard } = useBoardStore();
     const [showActivity, setShowActivity] = useState(false);
-    const { emitCardMoved, emitColumnMoved } = useKanbanSocket(board.id, currentUser.id);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isVideoActive, setIsVideoActive] = useState(false);
+
+    // Real-time chat messages
+    const [messages, setMessages] = useState<any[]>([]);
+
+    const handleInboundMeeting = useCallback((callerName: string) => {
+        toast(`${callerName} started a Team Video Call.`, {
+            action: {
+                label: 'Join Meeting',
+                onClick: () => setIsVideoActive(true),
+            },
+            duration: 10000,
+        });
+    }, []);
+
+    const handleInboundChat = useCallback((message: any) => {
+        setMessages((prev) => [...prev, message]);
+    }, []);
+
+    const { emitCardMoved, emitColumnMoved, emitMeetingStarted, emitChatMessage } = useKanbanSocket({
+        boardId: board.id,
+        userId: currentUser.id,
+        onMeetingTriggered: handleInboundMeeting,
+        onChatMessage: handleInboundChat
+    });
 
     useEffect(() => {
         setColumns(board.columns as KanbanColumn[]);
@@ -174,8 +200,23 @@ export function Board({ board, currentUser }: BoardProps) {
                 </div>
 
                 <div className="flex items-center gap-4">
-
-
+                    <button
+                        onClick={() => {
+                            setIsVideoActive(true);
+                            emitMeetingStarted(currentUser.name || currentUser.email, board.workspaceId);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700 transition-colors shadow-sm"
+                    >
+                        <Video size={16} />
+                        Team Meeting
+                    </button>
+                    <button
+                        onClick={() => setIsChatOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors shadow-sm"
+                    >
+                        <MessageSquare size={16} />
+                        Team Chat
+                    </button>
                     <button
                         onClick={() => setShowActivity(!showActivity)}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors shadow-sm"
@@ -246,7 +287,26 @@ export function Board({ board, currentUser }: BoardProps) {
                 )}
             </div>
 
+            {isVideoActive && (
+                <VideoCall
+                    roomName={board.workspaceId}
+                    userName={currentUser.name || currentUser.email}
+                    onClose={() => setIsVideoActive(false)}
+                />
+            )}
 
+            <ChatSidebar
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                onStartVideoCall={() => setIsVideoActive(true)}
+                currentUser={currentUser}
+                channelName={board.workspace?.name || 'Workspace'}
+                messages={messages}
+                onSendMessage={(msg) => {
+                    setMessages((prev) => [...prev, { ...msg, isMe: true }]);
+                    emitChatMessage(msg);
+                }}
+            />
         </div >
     );
 }
