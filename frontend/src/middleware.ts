@@ -6,7 +6,7 @@ const COOKIE_NAME = 'kanban_token';
 const publicRoutes = ['/', '/login', '/register'];
 const authRoutes = ['/login', '/register'];
 
-export default function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get(COOKIE_NAME)?.value;
     const isAuthenticated = !!token;
