@@ -19,7 +19,7 @@ export async function createWorkspace(
 
     const parsed = createWorkspaceSchema.safeParse({ name: formData.get('name') });
     if (!parsed.success) {
-        return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0].message } };
+        return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } };
     }
 
     const { name } = parsed.data;
@@ -98,7 +98,7 @@ export async function createBoard(
         description: formData.get('description'),
     });
     if (!parsed.success) {
-        return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0].message } };
+        return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } };
     }
 
     const workspaceId = formData.get('workspaceId') as string;
@@ -144,7 +144,7 @@ export async function inviteMember(
         role: formData.get('role'),
     });
     if (!parsed.success) {
-        return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0].message } };
+        return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } };
     }
 
     const adminCheck = await prisma.workspaceMember.findFirst({

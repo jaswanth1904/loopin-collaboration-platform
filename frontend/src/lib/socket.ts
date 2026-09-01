@@ -8,7 +8,7 @@ export function getSocket(): Socket {
             autoConnect: false,
             withCredentials: true,
             reconnection: true,
-            reconnectionAttempts: 5,
+            reconnectionAttempts: Infinity,
             reconnectionDelay: 2000,
         });
     }

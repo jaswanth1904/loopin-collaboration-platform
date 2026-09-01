@@ -3,6 +3,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { authSocketMiddleware } from './middlewares/authSocketMiddleware';
 import { registerBoardEvents } from './handlers/boardEvents';
 import { registerPresenceEvents } from './handlers/presenceEvents';
@@ -11,6 +13,14 @@ const app = express();
 const httpServer = createServer(app);
 
 const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+app.use(helmet());
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests, please try again later.' }
+});
+app.use(limiter);
 
 app.use(cors({ origin: NEXT_APP_URL, credentials: true }));
 app.use(cookieParser());
@@ -26,6 +36,7 @@ const io = new Server(httpServer, {
         credentials: true,
         methods: ['GET', 'POST'],
     },
+    maxHttpBufferSize: 1e6, // 1 Megabyte max payload limit to prevent buffer crash
     pingTimeout: 60000,
     pingInterval: 25000,
 });

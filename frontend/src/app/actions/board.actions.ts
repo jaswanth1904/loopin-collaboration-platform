@@ -61,7 +61,7 @@ export async function createColumn(boardId: string, formData: FormData): Promise
     if (!access) return { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } };
 
     const parsed = createColumnSchema.safeParse({ title: formData.get('title'), boardId });
-    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.errors?.[0]?.message ?? 'Validation error' } };
+    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.issues?.[0]?.message ?? 'Validation error' } };
 
     const lastCol = await prisma.column.findFirst({ where: { boardId }, orderBy: { orderIndex: 'desc' } });
     const orderIndex = lastCol ? lastCol.orderIndex + 1000 : 1000;
@@ -97,7 +97,7 @@ export async function createCard(formData: FormData): Promise<ApiResponse<Card>>
         labels: labels.length > 0 ? labels : undefined,
     });
 
-    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.errors?.[0]?.message ?? 'Validation failed' } };
+    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.issues?.[0]?.message ?? 'Validation failed' } };
 
     const column = await prisma.column.findFirst({
         where: {
@@ -167,7 +167,7 @@ export async function moveCard(payload: {
         toColumnId: payload.toColumnId,
         newOrderIndex: payload.newOrderIndex,
     });
-    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.errors?.[0]?.message ?? 'Validation error' } };
+    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.issues?.[0]?.message ?? 'Validation error' } };
 
     const card = await prisma.card.findFirst({
         where: { id: parsed.data.cardId, column: { board: { workspace: { members: { some: { userId: user.id } } } } } },
@@ -211,7 +211,7 @@ export async function updateCard(cardId: string, formData: FormData): Promise<Ap
         assignedToId: formData.get('assignedToId') || undefined,
         dueDate: formData.get('dueDate') || undefined,
     });
-    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.errors?.[0]?.message ?? 'Validation error' } };
+    if (!parsed.success) return { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error?.issues?.[0]?.message ?? 'Validation error' } };
 
     const card = await prisma.card.findFirst({
         where: { id: cardId, column: { board: { workspace: { members: { some: { userId: user.id } } } } } },
@@ -295,5 +295,5 @@ export async function getWorkspaceMembers(boardId: string) {
         include: { workspace: { include: { members: { include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } } } } } }
     });
     if (!board) return [];
-    return board.workspace.members.map(m => m.user);
+    return board.workspace.members.map((m: any) => m.user);
 }
